@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="JobLink UG helps job seekers find verified jobs in Uganda and helps employers manage trusted hiring."
+    />
+    <title>JobLink UG</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="Main navigation">
+        <div class="brand-block">
+          <div class="brand-mark">JU</div>
+          <div>
+            <h1>JobLink UG</h1>
+            <p>Uganda job board</p>
+          </div>
+        </div>
+
+        <nav class="role-tabs" aria-label="User role">
+          <button class="role-tab active" data-role="seeker" type="button">
+            <span aria-hidden="true">⌕</span>
+            <span>Seeker</span>
+          </button>
+          <button class="role-tab" data-role="employer" type="button">
+            <span aria-hidden="true">▦</span>
+            <span>Employer</span>
+          </button>
+          <button class="role-tab" data-role="admin" type="button">
+            <span aria-hidden="true">✓</span>
+            <span>Admin</span>
+          </button>
+        </nav>
+
+        <section class="sidebar-assist" aria-label="Profile quick actions">
+          <p class="sidebar-kicker">Next steps</p>
+          <h2>Complete your profile to get better matches</h2>
+          <div class="profile-meter" aria-label="Profile completion 65 percent">
+            <span></span>
+          </div>
+          <p class="profile-percent">65% complete</p>
+          <div class="sidebar-actions">
+            <button type="button">Upload CV</button>
+            <button type="button">Add skills</button>
+            <button type="button">Set job alerts</button>
+          </div>
+        </section>
+
+        <section class="sidebar-story" aria-label="About JobLink UG">
+          <div class="story-photo">
+            <img
+              src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=700&q=80"
+              alt="Person working on a laptop"
+            />
+          </div>
+          <p class="sidebar-kicker">Our promise</p>
+          <h2>A better way to find trusted work in Uganda</h2>
+          <p>
+            JobLink UG helps job seekers discover verified roles, compare flexible options,
+            and apply with confidence.
+          </p>
+          <div class="story-stats">
+            <span><strong>8</strong> categories</span>
+            <span><strong>5</strong> cities</span>
+          </div>
+        </section>
+
+        <section class="image-panel sidebar-promo" aria-label="Verified job search">
+          <img
+            src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80"
+            alt="Person smiling while working on a laptop"
+          />
+          <div class="promo-copy">
+            <p class="sidebar-kicker">Verified matches</p>
+            <h2>Find genuine jobs that match your skills</h2>
+            <p>
+              Browse verified Uganda opportunities ranked by location, category,
+              work mode, and experience level.
+            </p>
+            <div class="promo-badges">
+              <span><strong>250+</strong> curated listings</span>
+              <span><strong>0</strong> promoted scams</span>
+            </div>
+            <button class="promo-button" type="button">Start job search</button>
+          </div>
+        </section>
+
+        <section class="sidebar-companies" aria-label="Companies currently hiring in Uganda">
+          <p class="sidebar-kicker">Hiring now</p>
+          <h2>Companies currently hiring in Uganda</h2>
+          <div class="company-logo-grid">
+            <span>BCD</span>
+            <span>ZEN</span>
+            <span>PRG</span>
+            <span>AFR</span>
+            <span>NUM</span>
+            <span>NUG</span>
+          </div>
+          <button type="button">View all companies</button>
+        </section>
+
+        <section class="sidebar-advantage" aria-label="JobLink UG advantage">
+          <div class="advantage-art advantage-art-1" id="advantageArt" aria-hidden="true">
+            <div class="art-window"></div>
+            <div class="art-person"></div>
+            <div class="art-paper"></div>
+          </div>
+          <div class="advantage-copy">
+            <div class="advantage-nav">
+              <button type="button" id="prevAdvantage" aria-label="Previous advantage">‹</button>
+              <span id="advantageLabel">Advantage 01</span>
+              <button type="button" id="nextAdvantage" aria-label="Next advantage">›</button>
+            </div>
+            <h2 id="advantageTitle">Every job. One platform.</h2>
+            <p id="advantageText">
+              See relevant jobs in one place and get notified when new
+              opportunities appear.
+            </p>
+            <button class="advantage-button" type="button">Find jobs faster</button>
+          </div>
+        </section>
+
+        <section class="sidebar-question-card" aria-label="Contact JobLink UG">
+          <h2>Questions?</h2>
+          <button data-action="email" type="button">Contact us</button>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="viewEyebrow">Job seeker dashboard</p>
+            <h2 id="viewTitle">Find your next role</h2>
+          </div>
+          <button class="ghost-button" id="resetDemo" type="button">Reset demo</button>
+        </header>
+
+        <section class="view active" id="seekerView" aria-labelledby="viewTitle">
+          <section class="trust-band" aria-label="JobLink UG trust summary">
+            <div>
+              <p class="eyebrow">Verified opportunities</p>
+              <h3>Find real jobs across Uganda without the noise</h3>
+            </div>
+            <div class="trust-points">
+              <span>Verified employers</span>
+              <span>Remote, hybrid, and on-site</span>
+              <span>Fresh listings first</span>
+            </div>
+          </section>
+
+          <form class="job-search-bar" id="jobSearchForm">
+            <label class="search-field">
+              <span aria-hidden="true">⌕</span>
+              <input
+                id="jobSearch"
+                type="search"
+                placeholder="Search title, skill, company, or location"
+              />
+            </label>
+            <button class="primary-button" type="submit">Search</button>
+          </form>
+
+          <div class="summary-grid">
+            <article>
+              <span id="liveCount">0</span>
+              <p>Live jobs</p>
+            </article>
+            <article>
+              <span id="savedCount">0</span>
+              <p>Saved</p>
+            </article>
+            <article>
+              <span id="applicationCount">0</span>
+              <p>Applications</p>
+            </article>
+          </div>
+
+          <section class="popular-searches" aria-label="Popular job searches">
+            <div class="section-heading">
+              <h3>Popular searches</h3>
+              <p>Quick filters for common JobLink UG opportunities.</p>
+            </div>
+            <div class="quick-chip-row">
+              <button class="quick-chip" data-quick-category="IT & Software" type="button">IT & Software</button>
+              <button class="quick-chip" data-quick-category="Customer Service" type="button">Customer Service</button>
+              <button class="quick-chip" data-quick-category="Education" type="button">Teacher</button>
+              <button class="quick-chip" data-quick-category="Healthcare" type="button">Nurse</button>
+              <button class="quick-chip" data-quick-mode="Remote" type="button">Remote jobs</button>
+              <button class="quick-chip" data-quick-experience="Entry" type="button">Entry level</button>
+            </div>
+          </section>
+
+          <div class="listings-layout">
+            <aside class="filters-panel" aria-label="Job filters">
+              <div class="filters-header">
+                <h3>Filters</h3>
+                <button class="link-button" id="clearFilters" type="button">Clear</button>
+              </div>
+
+              <label>
+                Location
+                <select id="locationFilter">
+                  <option value="all">All locations</option>
+                  <option value="Kampala">Kampala</option>
+                  <option value="Entebbe">Entebbe</option>
+                  <option value="Mbarara">Mbarara</option>
+                  <option value="Gulu">Gulu</option>
+                  <option value="Jinja">Jinja</option>
+                </select>
+              </label>
+
+              <label>
+                Category
+                <select id="categoryFilter">
+                  <option value="all">All categories</option>
+                  <option value="IT & Software">IT & Software</option>
+                  <option value="Construction">Builder</option>
+                  <option value="Transport">Driver</option>
+                  <option value="Healthcare">Nurse</option>
+                  <option value="Education">Teacher</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Customer Service">Customer Service</option>
+                </select>
+              </label>
+
+              <label>
+                Job type
+                <select id="jobTypeFilter">
+                  <option value="all">All types</option>
+                  <option value="Full-time">Full-time</option>
+                  <option value="Part-time">Part-time</option>
+                  <option value="Contract">Contract</option>
+                  <option value="Internship">Internship</option>
+                </select>
+              </label>
+
+              <label>
+                Experience
+                <select id="experienceFilter">
+                  <option value="all">All levels</option>
+                  <option value="Entry">Entry</option>
+                  <option value="Mid-Level">Mid-Level</option>
+                  <option value="Senior">Senior</option>
+                </select>
+              </label>
+
+              <label>
+                Salary range
+                <select id="salaryFilter">
+                  <option value="all">Any salary</option>
+                  <option value="0-1000000">Below UGX 1M</option>
+                  <option value="1000000-2000000">UGX 1M - 2M</option>
+                  <option value="2000000-4000000">UGX 2M - 4M</option>
+                  <option value="4000000-999999999">Above UGX 4M</option>
+                </select>
+              </label>
+
+              <label>
+                Date posted
+                <select id="dateFilter">
+                  <option value="all">Any time</option>
+                  <option value="1">Today</option>
+                  <option value="7">Last 7 days</option>
+                  <option value="30">Last 30 days</option>
+                </select>
+              </label>
+
+              <label>
+                Work mode
+                <select id="workModeFilter">
+                  <option value="all">Remote or on-site</option>
+                  <option value="Remote">Remote</option>
+                  <option value="On-site">On-site</option>
+                  <option value="Hybrid">Hybrid</option>
+                </select>
+              </label>
+
+              <label>
+                Sort
+                <select id="sortFilter">
+                  <option value="newest">Newest jobs</option>
+                  <option value="salaryHigh">Highest salary</option>
+                  <option value="salaryLow">Lowest salary</option>
+                </select>
+              </label>
+            </aside>
+
+            <section>
+              <div class="results-header">
+                <p id="resultsCount">Showing 0 jobs</p>
+              </div>
+              <div class="job-grid" id="jobList"></div>
+            </section>
+          </div>
+
+          <section class="verification-section" aria-label="Job verification">
+            <div class="verification-heading">
+              <p class="eyebrow">Safer job search</p>
+              <h3>Avoid scams and junk. We verify job listings before they go live.</h3>
+            </div>
+            <div class="verification-grid">
+              <article>
+                <span class="verify-icon">✓</span>
+                <h4>Employer checks</h4>
+                <p>Company details are reviewed before jobs are approved for applicants.</p>
+              </article>
+              <article>
+                <span class="verify-icon">!</span>
+                <h4>Scam signals reviewed</h4>
+                <p>Listings that ask for suspicious fees or unclear contact details are flagged.</p>
+              </article>
+              <article>
+                <span class="verify-icon">★</span>
+                <h4>Curated results</h4>
+                <p>Search results focus on relevant jobs, not promoted noise.</p>
+              </article>
+            </div>
+          </section>
+
+          <footer class="directory-footer">
+            <div class="directory-links">
+              <nav aria-label="Countries">
+                <h3>Countries</h3>
+                <a href="#">Global</a>
+                <a href="#">Kenya</a>
+                <a href="#">Uganda</a>
+                <a href="#">Nigeria</a>
+              </nav>
+              <nav aria-label="For job seekers">
+                <h3>For job seekers</h3>
+                <a href="#">Find jobs</a>
+                <a href="#">Career guide</a>
+                <a href="#">Learn new skills</a>
+                <a href="#">Remote jobs</a>
+                <a href="#">Entry-level jobs</a>
+                <a href="#">Mid-level jobs</a>
+                <a href="#">Senior-level jobs</a>
+              </nav>
+              <nav aria-label="For recruiters">
+                <h3>For recruiters</h3>
+                <a href="#">Hire with JobLink UG</a>
+                <a href="#">Pricing</a>
+                <a href="#">Hire remote talent</a>
+              </nav>
+              <nav aria-label="Resources">
+                <h3>Resources</h3>
+                <a href="#">FAQ</a>
+                <a href="#">Contact us</a>
+                <a href="#">About JobLink UG</a>
+                <a href="#">Careers</a>
+              </nav>
+            </div>
+
+            <div class="directory-bottom">
+              <div class="footer-anniversary">
+                <div class="footer-brand-mark">JU</div>
+                <div>
+                  <strong>JobLink UG</strong>
+                  <span>Uganda job board</span>
+                </div>
+              </div>
+              <p>
+                JobLink UG helps you find roles that fit, learn what matters,
+                and act on clear insights with verified opportunities you can trust.
+              </p>
+              <div class="footer-socials">
+                <h3>Follow us</h3>
+                <div>
+                  <a href="#" aria-label="Facebook">f</a>
+                  <a href="#" aria-label="Instagram">◎</a>
+                  <a href="#" aria-label="X">x</a>
+                  <a href="#" aria-label="LinkedIn">in</a>
+                  <a href="#" aria-label="YouTube">▶</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="legal-footer">
+              <nav aria-label="Legal links">
+                <a href="#">Privacy notice</a>
+                <a href="#">Cookies policy</a>
+                <a href="#">Equality and opportunity</a>
+                <a href="#">Terms and conditions</a>
+              </nav>
+              <p>Copyright © 2026. All rights reserved.</p>
+            </div>
+          </footer>
+        </section>
+
+        <section class="view" id="employerView" aria-labelledby="viewTitle">
+          <div class="split-layout">
+            <form class="panel" id="jobForm">
+              <h3>Post a job</h3>
+              <label>
+                Job title
+                <input name="title" required placeholder="e.g. Sales Executive" />
+              </label>
+              <label>
+                Company
+                <input name="company" required placeholder="Company name" />
+              </label>
+              <div class="two-columns">
+                <label>
+                  Location
+                  <input name="location" required placeholder="Kampala" />
+                </label>
+                <label>
+                  Category
+                  <select name="category">
+                    <option>IT & Software</option>
+                    <option>Construction</option>
+                    <option>Transport</option>
+                    <option>Healthcare</option>
+                    <option>Education</option>
+                    <option>Finance</option>
+                    <option>Customer Service</option>
+                  </select>
+                </label>
+              </div>
+              <div class="two-columns">
+                <label>
+                  Type
+                  <select name="type">
+                    <option>Full-time</option>
+                    <option>Part-time</option>
+                    <option>Contract</option>
+                    <option>Internship</option>
+                  </select>
+                </label>
+                <label>
+                  Experience
+                  <select name="experience">
+                    <option>Entry</option>
+                    <option>Mid-Level</option>
+                    <option>Senior</option>
+                  </select>
+                </label>
+              </div>
+              <div class="two-columns">
+                <label>
+                  Work mode
+                  <select name="workMode">
+                    <option>On-site</option>
+                    <option>Remote</option>
+                    <option>Hybrid</option>
+                  </select>
+                </label>
+                <label>
+                  Skills
+                  <input name="skills" placeholder="Python, JavaScript" />
+                </label>
+              </div>
+              <label>
+                Salary
+                <input name="salary" placeholder="UGX 1.2M - 2M" />
+              </label>
+              <label>
+                Description
+                <textarea name="description" placeholder="What will the person do?"></textarea>
+              </label>
+              <button class="primary-button" type="submit">Submit job</button>
+            </form>
+
+            <div class="employer-side-stack">
+              <div class="panel">
+                <h3>Your listings</h3>
+                <div id="employerListings" class="stack-list"></div>
+              </div>
+
+            </div>
+          </div>
+
+          <section class="employer-difference">
+            <div>
+              <p class="eyebrow">Why we are different</p>
+              <h3>Why choose JobLink UG for hiring?</h3>
+            </div>
+            <div class="difference-grid">
+              <article>
+                <span>✓</span>
+                <h4>No more screening overload</h4>
+                <p>Use clear job requirements and applicant insights to focus on stronger candidates faster.</p>
+              </article>
+              <article>
+                <span>✓</span>
+                <h4>Verified employer trust</h4>
+                <p>Your approved listings appear as trusted opportunities so job seekers apply with confidence.</p>
+              </article>
+              <article>
+                <span>✓</span>
+                <h4>No unnecessary commitments</h4>
+                <p>Post roles, review applicants, and move forward only when the fit is right for your team.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="candidate-stats">
+            <div class="candidate-heading">
+              <h3>Who are our candidates?</h3>
+              <p>Exceptional job seekers across Uganda</p>
+            </div>
+            <div class="candidate-stat-grid">
+              <article>
+                <span class="candidate-icon">👥</span>
+                <strong>60,000+</strong>
+                <h4>Registered job seekers</h4>
+                <p>Across different backgrounds, industries, and disciplines.</p>
+              </article>
+              <article>
+                <span class="candidate-icon">★</span>
+                <strong>85%</strong>
+                <h4>Profile completion focus</h4>
+                <p>Candidates are guided to add skills, CVs, and preferred locations.</p>
+              </article>
+              <article>
+                <span class="candidate-icon">◇</span>
+                <strong>90%</strong>
+                <h4>Diverse candidates</h4>
+                <p>Talent from Kampala, Entebbe, Mbarara, Gulu, Jinja, and beyond.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="candidate-types">
+            <div class="candidate-type-heading">
+              <span></span>
+              <h3>Our candidates</h3>
+              <span></span>
+            </div>
+            <div class="candidate-type-grid">
+              <article>
+                <div>
+                  <div class="candidate-card-front">
+                    <span aria-hidden="true">🎓</span>
+                    <h4>Recent graduates</h4>
+                  </div>
+                  <p>
+                    Top university and college graduates ready to apply fresh knowledge
+                    in entry-level roles within your organization.
+                  </p>
+                </div>
+                <button type="button" data-action="candidate-graduates">Meet a candidate</button>
+              </article>
+              <article>
+                <div>
+                  <div class="candidate-card-front">
+                    <span aria-hidden="true">⚙</span>
+                    <h4>Skilled technicians</h4>
+                  </div>
+                  <p>
+                    Practical hands-on talent for field work, construction, transport,
+                    installation, maintenance, and operations.
+                  </p>
+                </div>
+                <button type="button" data-action="candidate-technicians">Meet a candidate</button>
+              </article>
+              <article>
+                <div>
+                  <div class="candidate-card-front">
+                    <span aria-hidden="true">🛡</span>
+                    <h4>Verified professionals</h4>
+                  </div>
+                  <p>
+                    Experienced candidates with clearer profiles, work history, and
+                    skills that help your team shortlist with confidence.
+                  </p>
+                </div>
+                <button type="button" data-action="candidate-professionals">Meet a candidate</button>
+              </article>
+            </div>
+          </section>
+
+          <section class="featured-employers">
+            <h3>Companies that hire with JobLink UG</h3>
+            <div class="featured-logo-row">
+              <span>MTN</span>
+              <span>Airtel</span>
+              <span>Centenary</span>
+              <span>Stanbic</span>
+              <span>Nile Energy</span>
+              <span>Uganda Airlines</span>
+            </div>
+          </section>
+
+          <section class="stay-touch">
+            <h3>Stay in touch!</h3>
+            <div class="stay-touch-grid">
+              <div>
+                <div class="stay-heading">
+                  <span></span>
+                  <h4>Follow us on social media</h4>
+                  <span></span>
+                </div>
+                <div class="stay-socials">
+                  <a href="#" aria-label="Instagram">◎</a>
+                  <a href="#" aria-label="Facebook">f</a>
+                  <a href="#" aria-label="LinkedIn">in</a>
+                  <a href="#" aria-label="YouTube">▶</a>
+                </div>
+              </div>
+              <div>
+                <div class="stay-heading">
+                  <span></span>
+                  <h4>Ready for next steps?</h4>
+                  <span></span>
+                </div>
+                <div class="stay-actions">
+                  <a href="#" data-action="email">Email us <span>›</span></a>
+                  <a href="#" data-action="candidate-database">Access candidate database <span>›</span></a>
+                  <a href="#" data-action="hiring-updates">Subscribe to hiring updates <span>›</span></a>
+                </div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="adminView" aria-labelledby="viewTitle">
+          <section class="admin-hero">
+            <div>
+              <p class="eyebrow">Platform control center</p>
+              <h3>Keep JobLink UG trusted, active, and useful.</h3>
+            </div>
+            <div class="admin-health">
+              <span>Trust score</span>
+              <strong>94%</strong>
+            </div>
+          </section>
+
+          <div class="admin-summary-grid">
+            <article>
+              <span id="adminJobs">0</span>
+              <p>Total jobs</p>
+            </article>
+            <article>
+              <span id="adminActiveJobs">0</span>
+              <p>Active jobs</p>
+            </article>
+            <article>
+              <span id="adminPending">0</span>
+              <p>Pending jobs</p>
+            </article>
+            <article>
+              <span id="adminUsers">0</span>
+              <p>Total users</p>
+            </article>
+            <article>
+              <span id="adminApplications">0</span>
+              <p>Total applications</p>
+            </article>
+          </div>
+
+          <div class="admin-layout">
+            <div class="panel">
+              <div class="section-heading">
+                <h3>Pending approvals</h3>
+                <p>Review before publishing</p>
+              </div>
+              <div id="pendingJobs" class="stack-list"></div>
+            </div>
+
+            <div class="panel">
+              <div class="section-heading">
+                <h3>Employer verification</h3>
+                <p>Company checks</p>
+              </div>
+              <div class="stack-list">
+                <div class="list-row">
+                  <div>
+                    <strong>Pearl Logistics</strong>
+                    <p>Trading license uploaded</p>
+                  </div>
+                  <button class="mini-action" data-action="verify-employer" type="button">Review</button>
+                </div>
+                <div class="list-row">
+                  <div>
+                    <strong>Kampala Digital Studio</strong>
+                    <p>Profile update pending</p>
+                  </div>
+                  <button class="mini-action" data-action="verify-employer" type="button">Review</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="section-heading">
+                <h3>Reports</h3>
+                <p>Needs attention</p>
+              </div>
+              <div id="reportsList" class="stack-list"></div>
+            </div>
+
+            <div class="panel admin-activity">
+              <div class="section-heading">
+                <h3>Recent activity</h3>
+                <p>Today</p>
+              </div>
+              <div class="activity-list">
+                <article>
+                  <span></span>
+                  <p>Frontend Developer approved by admin.</p>
+                </article>
+                <article>
+                  <span></span>
+                  <p>New employer verification request received.</p>
+                </article>
+                <article>
+                  <span></span>
+                  <p>Applicant report assigned for review.</p>
+                </article>
+              </div>
+            </div>
+          </div>
+
+          <section class="admin-ops">
+            <div class="panel platform-health">
+              <div class="section-heading">
+                <h3>Platform health</h3>
+                <p>Operational overview</p>
+              </div>
+              <div class="health-list">
+                <article>
+                  <div>
+                    <strong>Average approval time</strong>
+                    <p>Jobs reviewed within target window</p>
+                  </div>
+                  <span>2h</span>
+                </article>
+                <article>
+                  <div>
+                    <strong>Reports resolved</strong>
+                    <p>Scam and duplicate reports closed this week</p>
+                  </div>
+                  <span>91%</span>
+                </article>
+                <article>
+                  <div>
+                    <strong>Employer response rate</strong>
+                    <p>Employers responding to applicants within 48 hours</p>
+                  </div>
+                  <span>76%</span>
+                </article>
+              </div>
+            </div>
+
+            <div class="panel admin-quick-actions">
+              <div class="section-heading">
+                <h3>Quick actions</h3>
+                <p>Admin tools</p>
+              </div>
+              <div class="quick-action-grid">
+                <button type="button" data-action="verify-employer">Verify employer</button>
+                <button type="button" data-action="candidate-database">View talent database</button>
+                <button type="button">Add job category</button>
+                <button type="button">Export weekly report</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-moderation">
+            <div class="panel">
+              <div class="section-heading">
+                <h3>Moderation queue</h3>
+                <p>Risk checks</p>
+              </div>
+              <div class="moderation-grid">
+                <article>
+                  <span class="risk-high">High</span>
+                  <h4>Possible fee request</h4>
+                  <p>Sales Agent listing mentions upfront registration payment.</p>
+                  <button class="mini-action" type="button">Investigate</button>
+                </article>
+                <article>
+                  <span class="risk-medium">Medium</span>
+                  <h4>Duplicate job post</h4>
+                  <p>Customer Support role appears twice under different titles.</p>
+                  <button class="mini-action" type="button">Compare</button>
+                </article>
+                <article>
+                  <span class="risk-low">Low</span>
+                  <h4>Missing salary range</h4>
+                  <p>Teacher listing needs salary details before approval.</p>
+                  <button class="mini-action" type="button">Request edit</button>
+                </article>
+              </div>
+            </div>
+
+            <div class="panel admin-notes">
+              <div class="section-heading">
+                <h3>Admin notes</h3>
+                <p>Internal handoff</p>
+              </div>
+              <label>
+                Add a review note
+                <textarea placeholder="Write a short note for the next admin..."></textarea>
+              </label>
+              <button class="primary-button" type="button">Save note</button>
+            </div>
+          </section>
+
+          <section class="admin-final-row">
+            <div class="panel admin-checklist">
+              <div class="section-heading">
+                <h3>Weekly review checklist</h3>
+                <p>Admin routine</p>
+              </div>
+              <label><input type="checkbox" checked /> Review pending job approvals</label>
+              <label><input type="checkbox" checked /> Check flagged listings and reports</label>
+              <label><input type="checkbox" /> Verify new employer accounts</label>
+              <label><input type="checkbox" /> Export weekly platform summary</label>
+            </div>
+
+            <div class="panel system-status">
+              <div class="section-heading">
+                <h3>System status</h3>
+                <p>Live services</p>
+              </div>
+              <div class="status-grid">
+                <span>Job search online</span>
+                <span>Applications online</span>
+                <span>Admin review online</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-management">
+            <div class="section-heading">
+              <h3>Management tools</h3>
+              <p>Jobs, users, categories, locations, and applications</p>
+            </div>
+            <div class="management-grid">
+              <article>
+                <h4>Job management</h4>
+                <button type="button">Add new job</button>
+                <button type="button">View all jobs</button>
+                <button type="button">Edit or delete job</button>
+                <button type="button">Mark active or closed</button>
+              </article>
+              <article>
+                <h4>User management</h4>
+                <button type="button">View job seekers</button>
+                <button type="button">View employers</button>
+                <button type="button">Suspend user</button>
+                <button type="button">Remove user</button>
+              </article>
+              <article>
+                <h4>Categories</h4>
+                <button type="button">Add category</button>
+                <button type="button">Edit category</button>
+                <button type="button">Delete category</button>
+                <p>IT, Driver, Builder, Cleaner, Nurse, Teacher</p>
+              </article>
+              <article>
+                <h4>Locations</h4>
+                <button type="button">Add location</button>
+                <button type="button">Edit location</button>
+                <button type="button">Delete location</button>
+                <p>Kampala, Wakiso, Mpigi, Entebbe, Mbarara</p>
+              </article>
+              <article>
+                <h4>Applications</h4>
+                <button data-action="applicants" type="button">View applicants</button>
+                <button type="button">View CV/contact</button>
+                <button type="button">Mark reviewed</button>
+                <button type="button">Accept or reject</button>
+              </article>
+            </div>
+          </section>
+
+          <section class="admin-audit panel">
+            <div class="section-heading">
+              <h3>Audit trail</h3>
+              <p>Recent admin decisions</p>
+            </div>
+            <div class="audit-table">
+              <div class="audit-row audit-head">
+                <span>Time</span>
+                <span>Admin</span>
+                <span>Action</span>
+                <span>Status</span>
+              </div>
+              <div class="audit-row">
+                <span>09:20</span>
+                <span>Admin</span>
+                <span>Approved Frontend Developer listing</span>
+                <strong>Completed</strong>
+              </div>
+              <div class="audit-row">
+                <span>10:05</span>
+                <span>Admin</span>
+                <span>Flagged duplicate Customer Support listing</span>
+                <strong>Reviewing</strong>
+              </div>
+            </div>
+          </section>
+
+        </section>
+
+        </section>
+    </main>
+
+    <dialog id="jobDialog">
+      <div class="dialog-top">
+        <button class="icon-button" id="closeDialog" type="button" aria-label="Close">×</button>
+      </div>
+      <div id="jobDetails"></div>
+    </dialog>
+
+    <dialog id="actionDialog">
+      <div class="dialog-top">
+        <button class="icon-button" id="closeActionDialog" type="button" aria-label="Close">×</button>
+      </div>
+      <div id="actionDetails"></div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

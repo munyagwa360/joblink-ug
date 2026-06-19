@@ -1,0 +1,1 @@
+window.JOBLINK_API_URL = "https://your-render-backend-url.onrender.com";
