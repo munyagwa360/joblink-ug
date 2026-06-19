@@ -145,6 +145,16 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "JobLink UG API", "database": str(DB_PATH.name)}
 
 
+@app.get("/")
+def root() -> dict[str, str]:
+    return {
+        "message": "JobLink UG API is running",
+        "docs": "/docs",
+        "health": "/health",
+        "jobs": "/jobs",
+    }
+
+
 @app.get("/jobs", response_model=list[Job])
 def list_jobs(
     search: str | None = None,
