@@ -2451,3 +2451,306 @@ dialog::backdrop {
     flex-direction: column;
   }
 }
+
+/* Final mobile layout overrides: keep operational admin content readable. */
+@media (max-width: 920px) {
+  .admin-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-layout,
+  .admin-ops,
+  .admin-moderation,
+  .admin-final-row,
+  .moderation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .management-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .management-grid article,
+  .admin-summary-grid article {
+    min-width: 0;
+  }
+
+  .management-grid button {
+    min-height: 40px;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 560px) {
+  .workspace {
+    padding: 14px 14px 0;
+  }
+
+  .admin-hero,
+  .admin-summary-grid,
+  .management-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-hero {
+    padding: 18px;
+  }
+
+  .admin-hero h3 {
+    font-size: 28px;
+  }
+
+  .admin-summary-grid article,
+  .panel,
+  .admin-management,
+  .admin-audit {
+    padding: 14px;
+  }
+
+  .management-grid article {
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .management-grid h4 {
+    font-size: 18px;
+  }
+
+  .audit-head {
+    display: none;
+  }
+
+  .audit-row {
+    align-items: stretch;
+    gap: 7px;
+    grid-template-columns: 1fr;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .audit-row:not(.audit-head) span,
+  .audit-row:not(.audit-head) strong {
+    align-items: baseline;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 70px minmax(0, 1fr);
+    justify-self: stretch;
+  }
+
+  .audit-row:not(.audit-head) span::before,
+  .audit-row:not(.audit-head) strong::before {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .audit-row:not(.audit-head) span:nth-child(1)::before {
+    content: "Time";
+  }
+
+  .audit-row:not(.audit-head) span:nth-child(2)::before {
+    content: "Admin";
+  }
+
+  .audit-row:not(.audit-head) span:nth-child(3)::before {
+    content: "Action";
+  }
+
+  .audit-row:not(.audit-head) strong::before {
+    content: "Status";
+  }
+}
+
+/* Phone layout: no desktop columns, no clipped content, no horizontal page scroll. */
+@media (max-width: 920px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .app-shell {
+    display: block;
+    min-width: 0;
+    overflow-x: clip;
+    width: 100%;
+  }
+
+  .sidebar,
+  .workspace,
+  .view,
+  .panel,
+  .directory-footer,
+  .candidate-stats,
+  .candidate-types,
+  .featured-employers,
+  .stay-touch,
+  .employer-difference {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .sidebar {
+    align-self: auto;
+    padding: 16px;
+  }
+
+  .sidebar-question-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sidebar-question-card h2 {
+    white-space: normal;
+  }
+
+  #seekerView .listings-layout,
+  #seekerView .job-grid,
+  #seekerView .summary-grid,
+  #seekerView .verification-grid,
+  #seekerView .job-search-bar,
+  #employerView .split-layout,
+  #employerView .two-columns,
+  #employerView .employer-difference,
+  #employerView .difference-grid,
+  #employerView .candidate-stat-grid,
+  #employerView .candidate-type-grid,
+  #employerView .stay-touch-grid,
+  #adminView .admin-layout,
+  #adminView .admin-ops,
+  #adminView .admin-moderation,
+  #adminView .admin-final-row,
+  #adminView .moderation-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  #employerView .featured-logo-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #adminView .admin-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #adminView .management-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .trust-band,
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .directory-links,
+  .directory-bottom {
+    grid-template-columns: 1fr !important;
+  }
+
+  .footer-socials {
+    justify-self: start;
+  }
+
+  .legal-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .sidebar,
+  .workspace {
+    padding: 12px;
+  }
+
+  .sidebar-advantage {
+    margin-top: 12px;
+  }
+
+  .sidebar-advantage,
+  .sidebar-story,
+  .sidebar-promo,
+  .sidebar-companies {
+    min-width: 0;
+  }
+
+  .employer-difference,
+  .candidate-stats,
+  .candidate-types {
+    padding: 20px;
+  }
+
+  .employer-difference {
+    min-height: 0;
+  }
+
+  .difference-grid,
+  .candidate-stat-grid,
+  .candidate-type-grid {
+    gap: 16px;
+  }
+
+  .candidate-stat-grid strong {
+    font-size: 48px;
+  }
+
+  .candidate-type-grid article > div {
+    min-height: 220px;
+  }
+
+  .featured-employers,
+  .stay-touch {
+    padding: 16px;
+  }
+
+  .featured-logo-row span {
+    font-size: 12px;
+    min-height: 48px;
+    padding: 8px;
+  }
+
+  #adminView .admin-summary-grid {
+    gap: 8px;
+  }
+
+  #seekerView .summary-grid,
+  #seekerView .job-grid,
+  #seekerView .verification-grid,
+  #employerView .featured-logo-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  #seekerView .quick-chip-row,
+  #seekerView .tag-row,
+  #seekerView .badge-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #seekerView .quick-chip,
+  #seekerView .tag,
+  #seekerView .verified-badge {
+    justify-content: center;
+    text-align: center;
+  }
+
+  #adminView .admin-summary-grid article {
+    padding: 12px;
+  }
+
+  #adminView .admin-summary-grid span {
+    font-size: 24px;
+  }
+
+  #adminView .admin-summary-grid p {
+    font-size: 12px;
+  }
+
+  .management-grid button,
+  .quick-action-grid button {
+    min-height: 44px;
+    text-align: center;
+  }
+}
