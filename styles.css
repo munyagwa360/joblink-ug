@@ -1224,6 +1224,13 @@ h1 {
   margin-bottom: 22px;
 }
 
+.topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .eyebrow {
   color: var(--green);
   font-size: 12px;
@@ -1830,6 +1837,46 @@ dialog {
   border-radius: 8px;
   min-height: 46px;
   padding: 0 12px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+  padding: 4px 2px 8px;
+}
+
+.auth-form h2 {
+  color: var(--ink);
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.auth-form > p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.auth-form label {
+  color: #30423c;
+  display: grid;
+  font-size: 13px;
+  font-weight: 900;
+  gap: 7px;
+}
+
+.auth-form input,
+.auth-form select {
+  background: #f7faf7;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  min-height: 46px;
+  padding: 0 12px;
+}
+
+.auth-form .auth-message {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .admin-hero {
@@ -2439,6 +2486,15 @@ dialog::backdrop {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .topbar-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .topbar-actions .ghost-button {
+    flex: 1;
   }
 
   h2 {

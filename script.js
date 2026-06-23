@@ -166,6 +166,7 @@ let saved = load("joblink.saved", []);
 let applications = load("joblink.applications", []);
 let activeRole = "seeker";
 let apiOnline = false;
+let authState = load("joblink.auth", null);
 
 const titles = {
   seeker: ["Job seeker dashboard", "Find your next role"],
@@ -193,6 +194,9 @@ const jobDetails = document.querySelector("#jobDetails");
 const actionDialog = document.querySelector("#actionDialog");
 const actionDetails = document.querySelector("#actionDetails");
 const toast = document.querySelector("#toast");
+const authDialog = document.querySelector("#authDialog");
+const authDetails = document.querySelector("#authDetails");
+const authButton = document.querySelector("#authButton");
 const advantages = [
   {
     label: "Advantage 01",
@@ -229,6 +233,14 @@ roleTabs.forEach((tab) => {
 
 document.querySelector("#closeDialog").addEventListener("click", () => jobDialog.close());
 document.querySelector("#closeActionDialog").addEventListener("click", () => actionDialog.close());
+document.querySelector("#closeAuthDialog").addEventListener("click", () => authDialog.close());
+authButton.addEventListener("click", () => {
+  if (authState) {
+    signOut();
+    return;
+  }
+  openAuthDialog();
+});
 document.querySelector("#resetDemo").addEventListener("click", resetDemo);
 document.querySelector("#jobForm").addEventListener("submit", submitJob);
 document.querySelector("#clearFilters").addEventListener("click", clearFilters);
@@ -297,15 +309,29 @@ function restartAdvantageTimer() {
 }
 
 function setRole(role) {
+  if (role === "employer" && !hasRole("employer", "admin")) {
+    showToast("Sign in as an employer to manage job listings.");
+    openAuthDialog("login");
+    return;
+  }
+
+  if (role === "admin" && !hasRole("admin")) {
+    showToast("Sign in as an admin to open platform controls.");
+    openAuthDialog("login");
+    return;
+  }
+
   activeRole = role;
   roleTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.role === role));
   views.forEach((view) => view.classList.toggle("active", view.id === `${role}View`));
   viewEyebrow.textContent = titles[role][0];
   viewTitle.textContent = titles[role][1];
   render();
+  loadJobsFromApi();
 }
 
 function render() {
+  renderAuthButton();
   renderJobs();
   renderEmployer();
   renderAdmin();
@@ -314,26 +340,49 @@ function render() {
 
 async function loadJobsFromApi() {
   try {
-    const apiJobs = await apiRequest("/jobs?status=all");
+    const endpoint = hasRole("admin")
+      ? "/jobs?status=all"
+      : hasRole("employer")
+        ? "/employers/listings"
+        : "/jobs";
+    const apiJobs = await apiRequest(endpoint);
     jobs = apiJobs.map(normalizeJob);
     apiOnline = true;
     render();
-  } catch {
+  } catch (error) {
     apiOnline = false;
+    if (error.status === 401 || error.status === 403) {
+      showToast(error.message);
+    }
   }
 }
 
 async function apiRequest(path, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {})
+  };
+
+  if (authState?.token) {
+    headers.Authorization = `Bearer ${authState.token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
-    ...options
+    ...options,
+    headers
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed with ${response.status}`);
+    let message = `API request failed with ${response.status}`;
+    try {
+      const payload = await response.json();
+      message = payload.detail || message;
+    } catch {
+      // Keep the generic message when the response is not JSON.
+    }
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   if (response.status === 204) {
@@ -341,6 +390,122 @@ async function apiRequest(path, options = {}) {
   }
 
   return response.json();
+}
+
+function hasRole(...roles) {
+  return Boolean(authState?.user && roles.includes(authState.user.role));
+}
+
+function renderAuthButton() {
+  authButton.textContent = authState ? "Sign out" : "Sign in";
+}
+
+function openAuthDialog(mode = "login") {
+  authDetails.innerHTML = `
+    <form class="auth-form" id="authForm">
+      <p class="eyebrow">JobLink UG account</p>
+      <h2 id="authTitle">${mode === "register" ? "Create your account" : "Sign in"}</h2>
+      <p id="authIntro">${
+        mode === "register"
+          ? "Create a seeker or employer account to use protected actions."
+          : "Sign in to apply for jobs, post roles, or manage the platform."
+      }</p>
+      <label>
+        Account action
+        <select id="authMode" name="mode">
+          <option value="login" ${mode === "login" ? "selected" : ""}>Sign in</option>
+          <option value="register" ${mode === "register" ? "selected" : ""}>Create account</option>
+        </select>
+      </label>
+      <label id="authRoleField" ${mode === "login" ? "hidden" : ""}>
+        Account type
+        <select name="role">
+          <option value="seeker">Job seeker</option>
+          <option value="employer">Employer</option>
+        </select>
+      </label>
+      <label>
+        Email address
+        <input name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
+      </label>
+      <label>
+        Password
+        <input name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="At least 8 characters" />
+      </label>
+      <p class="auth-message" id="authMessage">Admin accounts are created securely by the platform owner.</p>
+      <button class="primary-button" id="authSubmit" type="submit">${
+        mode === "register" ? "Create account" : "Sign in"
+      }</button>
+    </form>
+  `;
+
+  const form = authDetails.querySelector("#authForm");
+  const modeSelect = authDetails.querySelector("#authMode");
+  modeSelect.addEventListener("change", () => updateAuthMode(modeSelect.value));
+  form.addEventListener("submit", submitAuth);
+  authDialog.showModal();
+}
+
+function updateAuthMode(mode) {
+  const isRegistering = mode === "register";
+  authDetails.querySelector("#authRoleField").hidden = !isRegistering;
+  authDetails.querySelector("#authTitle").textContent = isRegistering
+    ? "Create your account"
+    : "Sign in";
+  authDetails.querySelector("#authIntro").textContent = isRegistering
+    ? "Create a seeker or employer account to use protected actions."
+    : "Sign in to apply for jobs, post roles, or manage the platform.";
+  authDetails.querySelector("#authSubmit").textContent = isRegistering
+    ? "Create account"
+    : "Sign in";
+}
+
+async function submitAuth(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const mode = form.get("mode");
+  const payload = {
+    email: form.get("email").trim(),
+    password: form.get("password")
+  };
+
+  if (mode === "register") {
+    payload.role = form.get("role");
+  }
+
+  const submitButton = authDetails.querySelector("#authSubmit");
+  submitButton.disabled = true;
+  submitButton.textContent = mode === "register" ? "Creating account..." : "Signing in...";
+
+  try {
+    const response = await apiRequest(mode === "register" ? "/auth/register" : "/auth/login", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    authState = { token: response.access_token, user: response.user };
+    applications = [];
+    localStorage.setItem("joblink.auth", JSON.stringify(authState));
+    authDialog.close();
+    showToast(`Signed in as ${response.user.role}.`);
+    setRole(response.user.role);
+  } catch (error) {
+    authDetails.querySelector("#authMessage").textContent = error.message;
+    submitButton.disabled = false;
+    updateAuthMode(mode);
+  }
+}
+
+function signOut() {
+  authState = null;
+  localStorage.removeItem("joblink.auth");
+  activeRole = "seeker";
+  roleTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.role === "seeker"));
+  views.forEach((view) => view.classList.toggle("active", view.id === "seekerView"));
+  viewEyebrow.textContent = titles.seeker[0];
+  viewTitle.textContent = titles.seeker[1];
+  showToast("Signed out.");
+  render();
+  loadJobsFromApi();
 }
 
 function renderJobs() {
@@ -551,6 +716,13 @@ function renderAdmin() {
 
 async function submitJob(event) {
   event.preventDefault();
+
+  if (!hasRole("employer", "admin")) {
+    showToast("Sign in as an employer to submit a job.");
+    openAuthDialog("login");
+    return;
+  }
+
   const form = new FormData(event.currentTarget);
   const job = {
     id: String(Date.now()),
@@ -604,6 +776,12 @@ async function submitJob(event) {
 }
 
 async function approveJob(id) {
+  if (!hasRole("admin")) {
+    showToast("Sign in as an admin to approve jobs.");
+    openAuthDialog("login");
+    return;
+  }
+
   if (apiOnline) {
     try {
       const approvedJob = await apiRequest(`/jobs/${id}/approve`, { method: "PATCH" });
@@ -629,6 +807,12 @@ function toggleSave(id) {
 }
 
 async function applyJob(id) {
+  if (!hasRole("seeker")) {
+    showToast("Sign in as a job seeker to apply.");
+    openAuthDialog("login");
+    return;
+  }
+
   const alreadyApplied = applications.includes(id);
 
   if (!alreadyApplied) {
@@ -647,8 +831,6 @@ async function applyJob(id) {
       const application = await apiRequest(`/jobs/${id}/applications`, {
         method: "POST",
         body: JSON.stringify({
-          applicant_name: "Demo Job Seeker",
-          email: "seeker@joblinkug.example",
           note: "Application submitted from the JobLink UG website."
         })
       });

@@ -136,7 +136,10 @@
             <p class="eyebrow" id="viewEyebrow">Job seeker dashboard</p>
             <h2 id="viewTitle">Find your next role</h2>
           </div>
-          <button class="ghost-button" id="resetDemo" type="button">Reset demo</button>
+          <div class="topbar-actions">
+            <button class="ghost-button" id="authButton" type="button">Sign in</button>
+            <button class="ghost-button" id="resetDemo" type="button">Reset demo</button>
+          </div>
         </header>
 
         <section class="view active" id="seekerView" aria-labelledby="viewTitle">
@@ -914,6 +917,13 @@
         <button class="icon-button" id="closeActionDialog" type="button" aria-label="Close">×</button>
       </div>
       <div id="actionDetails"></div>
+    </dialog>
+
+    <dialog id="authDialog">
+      <div class="dialog-top">
+        <button class="icon-button" id="closeAuthDialog" type="button" aria-label="Close">×</button>
+      </div>
+      <div id="authDetails"></div>
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

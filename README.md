@@ -57,6 +57,34 @@ The database stores:
 
 The API seeds starter jobs only when the jobs table is empty, so new jobs and applications stay saved after the server restarts.
 
+## Authentication
+
+The API supports email/password accounts with three roles:
+
+- `seeker`: can apply for live jobs and view personal applications.
+- `employer`: can post jobs and view applications for their own listings.
+- `admin`: can approve jobs, view reports, and access platform summaries.
+
+Register seeker and employer accounts through the website. Admin registration is intentionally disabled from the public form.
+
+Before deploying authentication, add these environment variables in Render:
+
+```text
+JWT_SECRET=<a long private random value>
+ADMIN_EMAIL=<your private admin email>
+ADMIN_PASSWORD=<a strong password with at least 8 characters>
+```
+
+Render creates the admin account from `ADMIN_EMAIL` and `ADMIN_PASSWORD` the first time the API starts with those values. Do not put these values in GitHub or `config.js`.
+
+Authentication routes:
+
+```http
+POST /auth/register
+POST /auth/login
+GET /auth/me
+```
+
 ## Features
 
 - Job seekers can search jobs, filter listings, save jobs, and apply.

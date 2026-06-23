@@ -1,21 +1,35 @@
+import base64
+import hashlib
+import hmac
 import json
+import os
+import secrets
 import sqlite3
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import FastAPI, HTTPException, Query
+import jwt
+from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, Field
 
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "joblink.db"
+JWT_SECRET = os.getenv("JWT_SECRET", "local-development-secret-change-before-production")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRES_HOURS = 12
+
+Role = Literal["seeker", "employer", "admin"]
+JobStatus = Literal["Live", "Pending", "Closed"]
+ApplicationStatus = Literal["pending", "reviewed", "accepted", "rejected"]
 
 app = FastAPI(
     title="JobLink UG API",
     description="SQLite-backed API for JobLink UG jobs, employers, applications, and admin dashboards.",
-    version="0.2.0",
+    version="0.3.0",
 )
 
 app.add_middleware(
@@ -25,14 +39,38 @@ app.add_middleware(
         "http://localhost:5500",
         "http://127.0.0.1:8000",
         "http://localhost:8000",
+        "https://joblink-ug.netlify.app",
+        "https://wondrous-pony-c710e4.netlify.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
-JobStatus = Literal["Live", "Pending", "Closed"]
+
+class UserPublic(BaseModel):
+    id: str
+    email: str
+    role: Role
+
+
+class RegisterRequest(BaseModel):
+    email: str = Field(..., min_length=5)
+    password: str = Field(..., min_length=8)
+    role: Literal["seeker", "employer"]
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., min_length=5)
+    password: str = Field(..., min_length=8)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: Literal["bearer"] = "bearer"
+    user: UserPublic
 
 
 class JobBase(BaseModel):
@@ -62,16 +100,18 @@ class Job(JobBase):
 
 
 class ApplicationCreate(BaseModel):
-    applicant_name: str = Field(..., min_length=2)
-    email: str = Field(..., min_length=5)
-    cv_url: str | None = None
     note: str | None = None
+    cv_url: str | None = None
 
 
-class Application(ApplicationCreate):
+class Application(BaseModel):
     id: str
     job_id: str
-    status: Literal["pending", "reviewed", "accepted", "rejected"] = "pending"
+    applicant_name: str
+    email: str
+    cv_url: str | None = None
+    note: str | None = None
+    status: ApplicationStatus = "pending"
 
 
 SEED_JOBS = [
@@ -129,20 +169,36 @@ SEED_JOBS = [
 ]
 
 REPORTS = [
-    "Employer verification request: Pearl Logistics",
-    "Duplicate listing flagged: Sales Agent",
-    "Applicant complaint awaiting review",
+  "Employer verification request: Pearl Logistics",
+  "Duplicate listing flagged: Sales Agent",
+  "Applicant complaint awaiting review",
 ]
+
+
+def optional_user(token: Annotated[str | None, Depends(oauth2_scheme)]) -> UserPublic | None:
+    if not token:
+        return None
+    return user_from_token(token)
+
+
+def require_user(token: Annotated[str | None, Depends(oauth2_scheme)]) -> UserPublic:
+    if not token:
+        raise HTTPException(status_code=401, detail="Sign in is required")
+    return user_from_token(token)
+
+
+def require_roles(*allowed_roles: Role):
+    def dependency(current_user: Annotated[UserPublic, Depends(require_user)]) -> UserPublic:
+        if current_user.role not in allowed_roles:
+            raise HTTPException(status_code=403, detail="You do not have permission for this action")
+        return current_user
+
+    return dependency
 
 
 @app.on_event("startup")
 def startup() -> None:
     init_db()
-
-
-@app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "service": "JobLink UG API", "database": str(DB_PATH.name)}
 
 
 @app.get("/")
@@ -155,6 +211,47 @@ def root() -> dict[str, str]:
     }
 
 
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok", "service": "JobLink UG API", "database": DB_PATH.name}
+
+
+@app.post("/auth/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def register(payload: RegisterRequest) -> TokenResponse:
+    email = normalise_email(payload.email)
+    validate_email(email)
+
+    with connect() as db:
+        existing = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        if existing:
+            raise HTTPException(status_code=409, detail="An account with this email already exists")
+
+        cursor = db.execute(
+            "INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)",
+            (email, hash_password(payload.password), payload.role),
+        )
+        db.commit()
+        user = UserPublic(id=str(cursor.lastrowid), email=email, role=payload.role)
+    return token_response(user)
+
+
+@app.post("/auth/login", response_model=TokenResponse)
+def login(payload: LoginRequest) -> TokenResponse:
+    email = normalise_email(payload.email)
+    with connect() as db:
+        row = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+
+    if not row or not verify_password(payload.password, row["password_hash"]):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+
+    return token_response(user_from_row(row))
+
+
+@app.get("/auth/me", response_model=UserPublic)
+def auth_me(current_user: Annotated[UserPublic, Depends(require_user)]) -> UserPublic:
+    return current_user
+
+
 @app.get("/jobs", response_model=list[Job])
 def list_jobs(
     search: str | None = None,
@@ -163,48 +260,42 @@ def list_jobs(
     job_type: str | None = Query(default=None, alias="job_type"),
     experience: str | None = None,
     work_mode: str | None = None,
-    status: JobStatus | Literal["all"] = "Live",
+    status_filter: JobStatus | Literal["all"] = Query(default="Live", alias="status"),
     salary_min: int | None = None,
     salary_max: int | None = None,
     sort: Literal["newest", "salary_high", "salary_low"] = "newest",
+    current_user: Annotated[UserPublic | None, Depends(optional_user)] = None,
 ) -> list[Job]:
+    if status_filter != "Live" and (not current_user or current_user.role != "admin"):
+        raise HTTPException(status_code=403, detail="Only admins can view non-public jobs")
+
     clauses = []
     params: list[str | int] = []
 
-    if status != "all":
+    if status_filter != "all":
         clauses.append("status = ?")
-        params.append(status)
+        params.append(status_filter)
 
     if search:
         clauses.append(
-            "(lower(title || ' ' || company || ' ' || location || ' ' || category || ' ' || type || ' ' || experience || ' ' || work_mode || ' ' || skills) LIKE ?)"
+            "lower(title || ' ' || company || ' ' || location || ' ' || category || ' ' || type || ' ' || experience || ' ' || work_mode || ' ' || skills) LIKE ?"
         )
         params.append(f"%{search.lower()}%")
 
-    if location:
-        clauses.append("lower(location) = ?")
-        params.append(location.lower())
-
-    if category:
-        clauses.append("lower(category) = ?")
-        params.append(category.lower())
-
-    if job_type:
-        clauses.append("lower(type) = ?")
-        params.append(job_type.lower())
-
-    if experience:
-        clauses.append("lower(experience) = ?")
-        params.append(experience.lower())
-
-    if work_mode:
-        clauses.append("lower(work_mode) = ?")
-        params.append(work_mode.lower())
+    for column, value in {
+        "location": location,
+        "category": category,
+        "type": job_type,
+        "experience": experience,
+        "work_mode": work_mode,
+    }.items():
+        if value:
+            clauses.append(f"lower({column}) = ?")
+            params.append(value.lower())
 
     if salary_min is not None:
         clauses.append("salary_max >= ?")
         params.append(salary_min)
-
     if salary_max is not None:
         clauses.append("salary_min <= ?")
         params.append(salary_max)
@@ -214,127 +305,194 @@ def list_jobs(
         "salary_high": "salary_max DESC",
         "salary_low": "salary_min ASC",
     }[sort]
-
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
     with connect() as db:
         rows = db.execute(f"SELECT * FROM jobs {where} ORDER BY {order_by}", params).fetchall()
     return [job_from_row(row) for row in rows]
 
 
 @app.get("/jobs/{job_id}", response_model=Job)
-def get_job(job_id: str) -> Job:
-    return find_job(job_id)
+def get_job(
+    job_id: str,
+    current_user: Annotated[UserPublic | None, Depends(optional_user)] = None,
+) -> Job:
+    job = find_job(job_id)
+    if job.status != "Live" and (not current_user or current_user.role != "admin"):
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
 
 
-@app.post("/jobs", response_model=Job, status_code=201)
-def create_job(payload: JobCreate) -> Job:
+@app.post("/jobs", response_model=Job, status_code=status.HTTP_201_CREATED)
+def create_job(
+    payload: JobCreate,
+    current_user: Annotated[UserPublic, Depends(require_roles("employer", "admin"))],
+) -> Job:
     with connect() as db:
         cursor = db.execute(
             """
             INSERT INTO jobs (
                 title, company, location, category, type, experience, work_mode,
-                salary, salary_min, salary_max, posted_at, skills, description, status, applicants
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', 0)
+                salary, salary_min, salary_max, posted_at, skills, description,
+                status, applicants, employer_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', 0, ?)
             """,
-            job_values(payload),
+            (*job_values(payload), current_user.id),
         )
         db.commit()
-        return find_job(str(cursor.lastrowid))
+    return find_job(str(cursor.lastrowid))
 
 
 @app.patch("/jobs/{job_id}/status", response_model=Job)
-def update_job_status(job_id: str, status: JobStatus) -> Job:
+def update_job_status(
+    job_id: str,
+    current_user: Annotated[UserPublic, Depends(require_roles("admin"))],
+    status_value: JobStatus = Query(alias="status"),
+) -> Job:
     find_job(job_id)
     with connect() as db:
-        db.execute("UPDATE jobs SET status = ? WHERE id = ?", (status, job_id))
+        db.execute("UPDATE jobs SET status = ? WHERE id = ?", (status_value, job_id))
         db.commit()
     return find_job(job_id)
 
 
 @app.patch("/jobs/{job_id}/approve", response_model=Job)
-def approve_job(job_id: str) -> Job:
-    return update_job_status(job_id, "Live")
+def approve_job(
+    job_id: str,
+    current_user: Annotated[UserPublic, Depends(require_roles("admin"))],
+) -> Job:
+    with connect() as db:
+        result = db.execute("UPDATE jobs SET status = 'Live' WHERE id = ?", (job_id,))
+        db.commit()
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return find_job(job_id)
 
 
-@app.delete("/jobs/{job_id}", status_code=204)
-def delete_job(job_id: str) -> None:
-    find_job(job_id)
+@app.delete("/jobs/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_job(
+    job_id: str,
+    current_user: Annotated[UserPublic, Depends(require_roles("employer", "admin"))],
+) -> None:
+    job = find_job_row(job_id)
+    if current_user.role != "admin" and job["employer_id"] != int(current_user.id):
+        raise HTTPException(status_code=403, detail="You can only delete your own jobs")
     with connect() as db:
         db.execute("DELETE FROM applications WHERE job_id = ?", (job_id,))
         db.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
         db.commit()
 
 
-@app.post("/jobs/{job_id}/applications", response_model=Application, status_code=201)
-def apply_for_job(job_id: str, payload: ApplicationCreate) -> Application:
-    find_job(job_id)
+@app.post("/jobs/{job_id}/applications", response_model=Application, status_code=status.HTTP_201_CREATED)
+def apply_for_job(
+    job_id: str,
+    payload: ApplicationCreate,
+    current_user: Annotated[UserPublic, Depends(require_roles("seeker"))],
+) -> Application:
+    job = find_job(job_id)
+    if job.status != "Live":
+        raise HTTPException(status_code=400, detail="Applications are only open for live jobs")
+
     with connect() as db:
+        existing = db.execute(
+            "SELECT id FROM applications WHERE job_id = ? AND seeker_id = ?",
+            (job_id, current_user.id),
+        ).fetchone()
+        if existing:
+            raise HTTPException(status_code=409, detail="You already applied for this job")
+
         cursor = db.execute(
             """
-            INSERT INTO applications (job_id, applicant_name, email, cv_url, note, status)
-            VALUES (?, ?, ?, ?, ?, 'pending')
+            INSERT INTO applications (job_id, seeker_id, applicant_name, email, cv_url, note, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'pending')
             """,
-            (job_id, payload.applicant_name, payload.email, payload.cv_url, payload.note),
+            (job_id, current_user.id, current_user.email, current_user.email, payload.cv_url, payload.note),
         )
         db.execute("UPDATE jobs SET applicants = applicants + 1 WHERE id = ?", (job_id,))
         db.commit()
-        return find_application(str(cursor.lastrowid))
+    return find_application(str(cursor.lastrowid))
 
 
 @app.get("/applications", response_model=list[Application])
-def list_applications(status: str | None = None) -> list[Application]:
+def list_applications(
+    current_user: Annotated[UserPublic, Depends(require_roles("employer", "admin", "seeker"))],
+) -> list[Application]:
     with connect() as db:
-        if status:
-            rows = db.execute("SELECT * FROM applications WHERE status = ?", (status,)).fetchall()
-        else:
+        if current_user.role == "admin":
             rows = db.execute("SELECT * FROM applications ORDER BY id DESC").fetchall()
+        elif current_user.role == "employer":
+            rows = db.execute(
+                """
+                SELECT applications.* FROM applications
+                JOIN jobs ON jobs.id = applications.job_id
+                WHERE jobs.employer_id = ? ORDER BY applications.id DESC
+                """,
+                (current_user.id,),
+            ).fetchall()
+        else:
+            rows = db.execute(
+                "SELECT * FROM applications WHERE seeker_id = ? ORDER BY id DESC",
+                (current_user.id,),
+            ).fetchall()
     return [application_from_row(row) for row in rows]
 
 
 @app.patch("/applications/{application_id}/status", response_model=Application)
 def update_application_status(
     application_id: str,
-    status: Literal["pending", "reviewed", "accepted", "rejected"],
+    current_user: Annotated[UserPublic, Depends(require_roles("employer", "admin"))],
+    status_value: ApplicationStatus = Query(alias="status"),
 ) -> Application:
-    find_application(application_id)
+    application = find_application_row(application_id)
+    if current_user.role != "admin":
+        job = find_job_row(str(application["job_id"]))
+        if job["employer_id"] != int(current_user.id):
+            raise HTTPException(status_code=403, detail="You can only manage applications for your jobs")
+
     with connect() as db:
-        db.execute("UPDATE applications SET status = ? WHERE id = ?", (status, application_id))
+        db.execute("UPDATE applications SET status = ? WHERE id = ?", (status_value, application_id))
         db.commit()
     return find_application(application_id)
 
 
 @app.get("/employers/listings", response_model=list[Job])
-def employer_listings(company: str | None = None) -> list[Job]:
+def employer_listings(
+    current_user: Annotated[UserPublic, Depends(require_roles("employer", "admin"))],
+) -> list[Job]:
     with connect() as db:
-        if company:
-            rows = db.execute(
-                "SELECT * FROM jobs WHERE lower(company) = ? ORDER BY posted_at DESC",
-                (company.lower(),),
-            ).fetchall()
-        else:
+        if current_user.role == "admin":
             rows = db.execute("SELECT * FROM jobs ORDER BY posted_at DESC").fetchall()
+        else:
+            rows = db.execute(
+                "SELECT * FROM jobs WHERE employer_id = ? ORDER BY posted_at DESC",
+                (current_user.id,),
+            ).fetchall()
     return [job_from_row(row) for row in rows]
 
 
 @app.get("/admin/summary")
-def admin_summary() -> dict[str, int]:
+def admin_summary(
+    current_user: Annotated[UserPublic, Depends(require_roles("admin"))],
+) -> dict[str, int]:
     with connect() as db:
         total_jobs = db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
         active_jobs = db.execute("SELECT COUNT(*) FROM jobs WHERE status = 'Live'").fetchone()[0]
         pending_jobs = db.execute("SELECT COUNT(*) FROM jobs WHERE status = 'Pending'").fetchone()[0]
         total_applications = db.execute("SELECT COALESCE(SUM(applicants), 0) FROM jobs").fetchone()[0]
+        total_users = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     return {
         "total_jobs": total_jobs,
         "active_jobs": active_jobs,
         "pending_jobs": pending_jobs,
-        "total_users": 1248,
+        "total_users": total_users,
         "total_applications": total_applications,
     }
 
 
 @app.get("/admin/reports")
-def admin_reports() -> list[dict[str, str]]:
+def admin_reports(
+    current_user: Annotated[UserPublic, Depends(require_roles("admin"))],
+) -> list[dict[str, str]]:
     return [{"status": "Needs review", "message": report} for report in REPORTS]
 
 
@@ -342,16 +500,14 @@ def admin_reports() -> list[dict[str, str]]:
 def categories() -> list[str]:
     with connect() as db:
         rows = db.execute("SELECT DISTINCT category FROM jobs WHERE category != ''").fetchall()
-    defaults = {"Driver", "Builder", "Cleaner", "Nurse", "Teacher"}
-    return sorted({row["category"] for row in rows} | defaults)
+    return sorted({row["category"] for row in rows} | {"Driver", "Builder", "Cleaner", "Nurse", "Teacher"})
 
 
 @app.get("/locations")
 def locations() -> list[str]:
     with connect() as db:
         rows = db.execute("SELECT DISTINCT location FROM jobs WHERE location != ''").fetchall()
-    defaults = {"Kampala", "Wakiso", "Mpigi", "Entebbe", "Mbarara"}
-    return sorted({row["location"] for row in rows} | defaults)
+    return sorted({row["location"] for row in rows} | {"Kampala", "Wakiso", "Mpigi", "Entebbe", "Mbarara"})
 
 
 def connect() -> sqlite3.Connection:
@@ -361,8 +517,18 @@ def connect() -> sqlite3.Connection:
 
 
 def init_db() -> None:
-    BASE_DIR.mkdir(parents=True, exist_ok=True)
     with connect() as db:
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL CHECK (role IN ('seeker', 'employer', 'admin')),
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         db.execute(
             """
             CREATE TABLE IF NOT EXISTS jobs (
@@ -381,7 +547,8 @@ def init_db() -> None:
                 skills TEXT NOT NULL DEFAULT '[]',
                 description TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'Pending',
-                applicants INTEGER NOT NULL DEFAULT 0
+                applicants INTEGER NOT NULL DEFAULT 0,
+                employer_id INTEGER
             )
             """
         )
@@ -390,16 +557,21 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS applications (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 job_id INTEGER NOT NULL,
+                seeker_id INTEGER,
                 applicant_name TEXT NOT NULL,
                 email TEXT NOT NULL,
                 cv_url TEXT,
                 note TEXT,
                 status TEXT NOT NULL DEFAULT 'pending',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (job_id) REFERENCES jobs(id)
+                FOREIGN KEY (job_id) REFERENCES jobs(id),
+                FOREIGN KEY (seeker_id) REFERENCES users(id)
             )
             """
         )
+        ensure_column(db, "jobs", "employer_id", "INTEGER")
+        ensure_column(db, "applications", "seeker_id", "INTEGER")
+
         count = db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
         if count == 0:
             for job in SEED_JOBS:
@@ -408,92 +580,139 @@ def init_db() -> None:
                     INSERT INTO jobs (
                         title, company, location, category, type, experience, work_mode,
                         salary, salary_min, salary_max, posted_at, skills, description, status, applicants
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
-                        job["title"],
-                        job["company"],
-                        job["location"],
-                        job["category"],
-                        job["type"],
-                        job["experience"],
-                        job["work_mode"],
-                        job["salary"],
-                        job["salary_min"],
-                        job["salary_max"],
-                        job["posted_at"],
-                        json.dumps(job["skills"]),
-                        job["description"],
-                        job["status"],
-                        job["applicants"],
+                        job["title"], job["company"], job["location"], job["category"], job["type"],
+                        job["experience"], job["work_mode"], job["salary"], job["salary_min"],
+                        job["salary_max"], job["posted_at"], json.dumps(job["skills"]),
+                        job["description"], job["status"], job["applicants"],
                     ),
                 )
+        seed_admin_from_env(db)
         db.commit()
 
 
+def ensure_column(db: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+    columns = {row["name"] for row in db.execute(f"PRAGMA table_info({table})").fetchall()}
+    if column not in columns:
+        db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
+def seed_admin_from_env(db: sqlite3.Connection) -> None:
+    email = os.getenv("ADMIN_EMAIL")
+    password = os.getenv("ADMIN_PASSWORD")
+    if not email or not password:
+        return
+
+    email = normalise_email(email)
+    existing = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+    if not existing:
+        db.execute(
+            "INSERT INTO users (email, password_hash, role) VALUES (?, ?, 'admin')",
+            (email, hash_password(password)),
+        )
+
+
+def user_from_token(token: str) -> UserPublic:
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = str(payload.get("sub", ""))
+    except jwt.PyJWTError as error:
+        raise HTTPException(status_code=401, detail="Invalid or expired sign-in token") from error
+
+    with connect() as db:
+        row = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=401, detail="Account not found")
+    return user_from_row(row)
+
+
+def token_response(user: UserPublic) -> TokenResponse:
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRES_HOURS)
+    token = jwt.encode(
+        {"sub": user.id, "role": user.role, "exp": expires_at},
+        JWT_SECRET,
+        algorithm=JWT_ALGORITHM,
+    )
+    return TokenResponse(access_token=token, user=user)
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 310000)
+    return f"{base64.b64encode(salt).decode()}${base64.b64encode(digest).decode()}"
+
+
+def verify_password(password: str, stored_value: str) -> bool:
+    try:
+        salt_text, digest_text = stored_value.split("$", maxsplit=1)
+        salt = base64.b64decode(salt_text)
+        expected = base64.b64decode(digest_text)
+    except (ValueError, base64.binascii.Error):
+        return False
+    actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 310000)
+    return hmac.compare_digest(actual, expected)
+
+
+def normalise_email(value: str) -> str:
+    return value.strip().lower()
+
+
+def validate_email(email: str) -> None:
+    if "@" not in email or email.startswith("@") or email.endswith("@"):
+        raise HTTPException(status_code=422, detail="Enter a valid email address")
+
+
 def find_job(job_id: str) -> Job:
+    return job_from_row(find_job_row(job_id))
+
+
+def find_job_row(job_id: str) -> sqlite3.Row:
     with connect() as db:
         row = db.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Job not found")
-    return job_from_row(row)
+    return row
 
 
 def find_application(application_id: str) -> Application:
+    return application_from_row(find_application_row(application_id))
+
+
+def find_application_row(application_id: str) -> sqlite3.Row:
     with connect() as db:
         row = db.execute("SELECT * FROM applications WHERE id = ?", (application_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Application not found")
-    return application_from_row(row)
+    return row
 
 
 def job_values(job: JobBase) -> tuple:
     return (
-        job.title,
-        job.company,
-        job.location,
-        job.category,
-        job.type,
-        job.experience,
-        job.work_mode,
-        job.salary,
-        job.salary_min,
-        job.salary_max,
-        job.posted_at.isoformat(),
-        json.dumps(job.skills),
-        job.description,
+        job.title, job.company, job.location, job.category, job.type, job.experience,
+        job.work_mode, job.salary, job.salary_min, job.salary_max, job.posted_at.isoformat(),
+        json.dumps(job.skills), job.description,
     )
+
+
+def user_from_row(row: sqlite3.Row) -> UserPublic:
+    return UserPublic(id=str(row["id"]), email=row["email"], role=row["role"])
 
 
 def job_from_row(row: sqlite3.Row) -> Job:
     return Job(
-        id=str(row["id"]),
-        title=row["title"],
-        company=row["company"],
-        location=row["location"],
-        category=row["category"],
-        type=row["type"],
-        experience=row["experience"],
-        work_mode=row["work_mode"],
-        salary=row["salary"],
-        salary_min=row["salary_min"],
-        salary_max=row["salary_max"],
-        posted_at=date.fromisoformat(row["posted_at"]),
-        skills=json.loads(row["skills"] or "[]"),
-        description=row["description"],
-        status=row["status"],
-        applicants=row["applicants"],
+        id=str(row["id"]), title=row["title"], company=row["company"],
+        location=row["location"], category=row["category"], type=row["type"],
+        experience=row["experience"], work_mode=row["work_mode"], salary=row["salary"],
+        salary_min=row["salary_min"], salary_max=row["salary_max"],
+        posted_at=date.fromisoformat(row["posted_at"]), skills=json.loads(row["skills"] or "[]"),
+        description=row["description"], status=row["status"], applicants=row["applicants"],
     )
 
 
 def application_from_row(row: sqlite3.Row) -> Application:
     return Application(
-        id=str(row["id"]),
-        job_id=str(row["job_id"]),
-        applicant_name=row["applicant_name"],
-        email=row["email"],
-        cv_url=row["cv_url"],
-        note=row["note"],
-        status=row["status"],
+        id=str(row["id"]), job_id=str(row["job_id"]), applicant_name=row["applicant_name"],
+        email=row["email"], cv_url=row["cv_url"], note=row["note"], status=row["status"],
     )
