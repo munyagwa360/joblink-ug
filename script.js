@@ -770,7 +770,9 @@ async function submitJob(event) {
     jobs = [job, ...jobs];
   }
 
-  event.currentTarget.reset();
+if (event.target && typeof event.target.reset === "function") {
+  event.target.reset();
+}
   showToast("Job submitted for admin approval.");
   render();
 }
