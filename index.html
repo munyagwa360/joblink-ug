@@ -930,5 +930,154 @@
 
     <script src="config.js"></script>
     <script src="script.js"></script>
-  </body>
+  <script>
+    (() => {
+      const actions = {
+        "upload cv": {
+          title: "Upload your CV",
+          body: "Choose a PDF, DOC, or DOCX file so employers can review your profile faster.",
+          fields: `<input id="profileActionFile" type="file" accept=".pdf,.doc,.docx" />`,
+          button: "Save CV",
+          done: "CV saved to your profile."
+        },
+        "add skills": {
+          title: "Add your skills",
+          body: "Add a few skills separated by commas. These help JobLink UG match you with better roles.",
+          fields: `<textarea id="profileActionSkills" rows="4" placeholder="Customer care, JavaScript, Driving, Teaching"></textarea>`,
+          button: "Save skills",
+          done: "Skills saved to your profile."
+        },
+        "set job alerts": {
+          title: "Set job alerts",
+          body: "Tell us what roles you want and we will keep this search ready for new matches.",
+          fields: `
+            <input id="profileActionKeyword" type="text" placeholder="Job title or skill" />
+            <input id="profileActionLocation" type="text" placeholder="Preferred location" />
+          `,
+          button: "Save alert",
+          done: "Job alert saved."
+        }
+      };
+
+      const getToast = () => window.showToast || ((message) => alert(message));
+
+      const ensureDialog = () => {
+        let dialog = document.getElementById("profileActionDialog");
+        if (dialog) return dialog;
+
+        dialog = document.createElement("div");
+        dialog.id = "profileActionDialog";
+        dialog.className = "profile-action-dialog";
+        dialog.innerHTML = `
+          <div class="profile-action-panel" role="dialog" aria-modal="true" aria-labelledby="profileActionTitle">
+            <button class="profile-action-close" type="button" aria-label="Close">x</button>
+            <p class="eyebrow">Profile step</p>
+            <h3 id="profileActionTitle"></h3>
+            <p id="profileActionBody"></p>
+            <div id="profileActionFields" class="profile-action-fields"></div>
+            <button id="profileActionSave" class="primary-button" type="button"></button>
+          </div>
+        `;
+        document.body.appendChild(dialog);
+
+        const style = document.createElement("style");
+        style.textContent = `
+          .profile-action-dialog {
+            position: fixed;
+            inset: 0;
+            z-index: 80;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(3, 27, 22, 0.58);
+          }
+          .profile-action-dialog.is-open {
+            display: flex;
+          }
+          .profile-action-panel {
+            width: min(460px, 100%);
+            background: #fff;
+            border: 1px solid #d8e4de;
+            border-radius: 8px;
+            padding: 28px;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
+            position: relative;
+          }
+          .profile-action-close {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 42px;
+            height: 42px;
+            border: 1px solid #d8e4de;
+            border-radius: 8px;
+            background: #f7faf8;
+            color: #00604f;
+            font-weight: 900;
+            cursor: pointer;
+          }
+          .profile-action-panel h3 {
+            margin: 6px 0 8px;
+            font-size: 30px;
+            line-height: 1.05;
+          }
+          .profile-action-panel p {
+            color: #5c6c68;
+            line-height: 1.45;
+          }
+          .profile-action-fields {
+            display: grid;
+            gap: 12px;
+            margin: 18px 0;
+          }
+          .profile-action-fields input,
+          .profile-action-fields textarea {
+            width: 100%;
+            border: 1px solid #d8e4de;
+            border-radius: 8px;
+            padding: 15px 16px;
+            font: inherit;
+            background: #f8fbf9;
+          }
+        `;
+        document.head.appendChild(style);
+
+        dialog.querySelector(".profile-action-close").addEventListener("click", () => {
+          dialog.classList.remove("is-open");
+        });
+
+        dialog.addEventListener("click", (event) => {
+          if (event.target === dialog) {
+            dialog.classList.remove("is-open");
+          }
+        });
+
+        return dialog;
+      };
+
+      document.addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        if (!button) return;
+
+        const action = actions[button.textContent.trim().toLowerCase()];
+        if (!action) return;
+
+        const dialog = ensureDialog();
+        dialog.querySelector("#profileActionTitle").textContent = action.title;
+        dialog.querySelector("#profileActionBody").textContent = action.body;
+        dialog.querySelector("#profileActionFields").innerHTML = action.fields;
+        dialog.querySelector("#profileActionSave").textContent = action.button;
+        dialog.querySelector("#profileActionSave").onclick = () => {
+          const profile = JSON.parse(localStorage.getItem("joblinkProfileSteps") || "{}");
+          profile[action.title] = true;
+          localStorage.setItem("joblinkProfileSteps", JSON.stringify(profile));
+          dialog.classList.remove("is-open");
+          getToast()(action.done);
+        };
+        dialog.classList.add("is-open");
+      });
+    })();
+  </script>
+</body>
 </html>
